@@ -75,6 +75,7 @@ import { SeatActionModal } from './components/SeatActionModal';
 import { StudentFormModal } from './components/StudentFormModal';
 import { RecordPaymentModal } from './components/RecordPaymentModal';
 import { AddExpenseModal } from './components/AddExpenseModal';
+import { CommandPaletteModal } from './components/CommandPaletteModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
@@ -144,6 +145,7 @@ export default function App() {
   const [paymentPreselectedStudent, setPaymentPreselectedStudent] = useState<Student | undefined>(undefined);
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<PaymentRecord | null>(null);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   // Toast Notification state
   const [toast, setToast] = useState<{
@@ -305,6 +307,10 @@ export default function App() {
   };
 
   const handleSyncToFirestore = async () => {
+    if (!currentUser) {
+      showToast('Please sign in with Google (using the button in the header) to sync data with Firestore.', 'info');
+      return;
+    }
     try {
       showToast('Syncing all records to Firestore cloud database...', 'info');
       for (const s of students) await saveStudentDoc(s);
@@ -994,6 +1000,7 @@ export default function App() {
         students={students}
         onRoleChange={setRole}
         onOpenScanner={() => setIsScannerOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         currentUser={currentUser}
         isFirebaseConnected={isFirebaseConnected}
         onLogin={handleLogin}
@@ -1237,6 +1244,52 @@ export default function App() {
         isOpen={isAddExpenseOpen}
         onClose={() => setIsAddExpenseOpen(false)}
         onSave={handleSaveExpense}
+      />
+
+      {/* 8. Global Spotlight & Command Palette (Cmd+K / Ctrl+K) */}
+      <CommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        students={students}
+        seats={seats}
+        sessions={sessions}
+        payments={payments}
+        onNavigateToTab={tab => {
+          setActiveTab(tab);
+          setIsCommandPaletteOpen(false);
+        }}
+        onSelectStudentCard={student => {
+          setCardStudent(student);
+          setIsCommandPaletteOpen(false);
+        }}
+        onSelectSeat={seat => {
+          setActiveTab('seats');
+          setSelectedSeat(seat);
+          setIsCommandPaletteOpen(false);
+        }}
+        onCheckInStudent={student => {
+          handleStudentScan(student);
+        }}
+        onCheckOutStudent={student => {
+          handleCheckOut(student);
+        }}
+        onOpenRecordPayment={student => {
+          setPaymentPreselectedStudent(student);
+          setIsRecordPaymentOpen(true);
+          setIsCommandPaletteOpen(false);
+        }}
+        onSendWhatsAppReminder={student => {
+          handleSendSingleReminder(student);
+        }}
+        onOpenAddStudent={() => {
+          setEditingStudent(null);
+          setIsAddStudentOpen(true);
+          setIsCommandPaletteOpen(false);
+        }}
+        onOpenScanner={() => {
+          setIsScannerOpen(true);
+          setIsCommandPaletteOpen(false);
+        }}
       />
     </div>
   );

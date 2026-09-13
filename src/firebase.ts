@@ -294,17 +294,35 @@ export function subscribeToSettings(
   );
 }
 
-// Single Document Writers
+// Defensive data sanitizer to strip undefined values prior to Firestore writes
+export function sanitizeForFirestore<T extends Record<string, any>>(data: T): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = sanitizeForFirestore(value);
+      } else {
+        result[key] = value;
+      }
+    }
+  }
+  return result;
+}
+
+// Single Document Writers (Guarded for Authenticated Cloud Sessions)
 export async function saveStudentDoc(student: Student) {
+  if (!auth.currentUser) return;
   const path = `students/${student.id}`;
   try {
-    await setDoc(doc(db, 'students', student.id), student);
+    const cleanData = sanitizeForFirestore(student);
+    await setDoc(doc(db, 'students', student.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function deleteStudentDoc(studentId: string) {
+  if (!auth.currentUser) return;
   const path = `students/${studentId}`;
   try {
     await deleteDoc(doc(db, 'students', studentId));
@@ -314,63 +332,77 @@ export async function deleteStudentDoc(studentId: string) {
 }
 
 export async function saveSeatDoc(seat: Seat) {
+  if (!auth.currentUser) return;
   const path = `seats/${seat.id}`;
   try {
-    await setDoc(doc(db, 'seats', seat.id), seat);
+    const cleanData = sanitizeForFirestore(seat);
+    await setDoc(doc(db, 'seats', seat.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function saveSessionDoc(session: AttendanceSession) {
+  if (!auth.currentUser) return;
   const path = `sessions/${session.id}`;
   try {
-    await setDoc(doc(db, 'sessions', session.id), session);
+    const cleanData = sanitizeForFirestore(session);
+    await setDoc(doc(db, 'sessions', session.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function savePaymentDoc(payment: PaymentRecord) {
+  if (!auth.currentUser) return;
   const path = `payments/${payment.id}`;
   try {
-    await setDoc(doc(db, 'payments', payment.id), payment);
+    const cleanData = sanitizeForFirestore(payment);
+    await setDoc(doc(db, 'payments', payment.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function saveExpenseDoc(expense: ExpenseRecord) {
+  if (!auth.currentUser) return;
   const path = `expenses/${expense.id}`;
   try {
-    await setDoc(doc(db, 'expenses', expense.id), expense);
+    const cleanData = sanitizeForFirestore(expense);
+    await setDoc(doc(db, 'expenses', expense.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function saveReminderDoc(reminder: ReminderLog) {
+  if (!auth.currentUser) return;
   const path = `reminders/${reminder.id}`;
   try {
-    await setDoc(doc(db, 'reminders', reminder.id), reminder);
+    const cleanData = sanitizeForFirestore(reminder);
+    await setDoc(doc(db, 'reminders', reminder.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function saveActivityLogDoc(log: ActivityLog) {
+  if (!auth.currentUser) return;
   const path = `activityLogs/${log.id}`;
   try {
-    await setDoc(doc(db, 'activityLogs', log.id), log);
+    const cleanData = sanitizeForFirestore(log);
+    await setDoc(doc(db, 'activityLogs', log.id), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
 export async function saveSettingsDoc(settings: SystemSettings) {
+  if (!auth.currentUser) return;
   const path = 'settings/default';
   try {
-    await setDoc(doc(db, 'settings', 'default'), settings);
+    const cleanData = sanitizeForFirestore(settings);
+    await setDoc(doc(db, 'settings', 'default'), cleanData);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -385,6 +417,7 @@ export async function seedFirestoreIfEmpty(
   initialExpenses: ExpenseRecord[],
   initialSettings: SystemSettings
 ) {
+  if (!auth.currentUser) return;
   try {
     const studentCheck = await getDocs(collection(db, 'students'));
     if (studentCheck.empty) {
@@ -392,21 +425,21 @@ export async function seedFirestoreIfEmpty(
       const batch = writeBatch(db);
 
       initialStudents.forEach(s => {
-        batch.set(doc(db, 'students', s.id), s);
+        batch.set(doc(db, 'students', s.id), sanitizeForFirestore(s));
       });
       initialSeats.forEach(s => {
-        batch.set(doc(db, 'seats', s.id), s);
+        batch.set(doc(db, 'seats', s.id), sanitizeForFirestore(s));
       });
       initialSessions.forEach(s => {
-        batch.set(doc(db, 'sessions', s.id), s);
+        batch.set(doc(db, 'sessions', s.id), sanitizeForFirestore(s));
       });
       initialPayments.forEach(p => {
-        batch.set(doc(db, 'payments', p.id), p);
+        batch.set(doc(db, 'payments', p.id), sanitizeForFirestore(p));
       });
       initialExpenses.forEach(e => {
-        batch.set(doc(db, 'expenses', e.id), e);
+        batch.set(doc(db, 'expenses', e.id), sanitizeForFirestore(e));
       });
-      batch.set(doc(db, 'settings', 'default'), initialSettings);
+      batch.set(doc(db, 'settings', 'default'), sanitizeForFirestore(initialSettings));
 
       await batch.commit();
       console.info('Firestore initial seed completed successfully.');

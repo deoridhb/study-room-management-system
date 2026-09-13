@@ -54,11 +54,12 @@
         "checkInTime": { "type": "string" },
         "checkOutTime": { "type": "string" },
         "durationMinutes": { "type": "number" },
-        "status": { "type": "string", "enum": ["inside", "completed"] },
-        "scanMethod": { "type": "string", "enum": ["qr_camera", "manual_override"] },
+        "status": { "type": "string", "enum": ["inside", "outside"] },
+        "isManualOverride": { "type": "boolean" },
+        "isOfflineSynced": { "type": "boolean" },
         "notes": { "type": "string", "maxLength": 200 }
       },
-      "required": ["id", "studentId", "studentName", "checkInTime", "status", "scanMethod"]
+      "required": ["id", "studentId", "studentName", "seatNumber", "checkInTime", "status"]
     },
     "PaymentRecord": {
       "title": "PaymentRecord",
@@ -66,19 +67,22 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "receiptNumber": { "type": "string" },
+        "receiptNo": { "type": "string" },
         "studentId": { "type": "string" },
         "studentName": { "type": "string" },
         "planId": { "type": "string" },
+        "planName": { "type": "string" },
         "amountPaid": { "type": "number" },
         "totalFee": { "type": "number" },
         "pendingAmount": { "type": "number" },
-        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "bank_transfer"] },
+        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "bank_transfer", "other"] },
+        "status": { "type": "string", "enum": ["paid", "partial", "pending"] },
         "transactionRef": { "type": "string", "maxLength": 100 },
         "paymentDate": { "type": "string" },
+        "dueDate": { "type": "string" },
         "notes": { "type": "string", "maxLength": 300 }
       },
-      "required": ["id", "receiptNumber", "studentId", "studentName", "amountPaid", "totalFee", "paymentMethod", "paymentDate"]
+      "required": ["id", "receiptNo", "studentId", "studentName", "amountPaid", "totalFee", "paymentMethod", "paymentDate", "status"]
     },
     "ExpenseRecord": {
       "title": "ExpenseRecord",
@@ -86,16 +90,14 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "category": { "type": "string", "enum": ["rent", "electricity", "internet", "maintenance", "cleaning", "supplies", "staff", "other"] },
-        "title": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "enum": ["rent", "electricity", "internet", "cleaning", "maintenance", "furniture", "equipment", "stationery", "staff", "other"] },
+        "description": { "type": "string", "maxLength": 200 },
         "amount": { "type": "number" },
         "date": { "type": "string" },
-        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "bank_transfer"] },
-        "receiptRef": { "type": "string", "maxLength": 100 },
-        "notes": { "type": "string", "maxLength": 300 },
-        "createdBy": { "type": "string" }
+        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "bank_transfer", "other"] },
+        "receiptRef": { "type": "string", "maxLength": 100 }
       },
-      "required": ["id", "category", "title", "amount", "date", "paymentMethod"]
+      "required": ["id", "category", "description", "amount", "date", "paymentMethod"]
     },
     "ReminderLog": {
       "title": "ReminderLog",
@@ -105,16 +107,16 @@
         "id": { "type": "string" },
         "studentId": { "type": "string" },
         "studentName": { "type": "string" },
-        "studentPhone": { "type": "string" },
-        "reminderType": { "type": "string", "enum": ["due_soon", "overdue"] },
+        "phone": { "type": "string" },
+        "channel": { "type": "string", "enum": ["whatsapp_cloud_api", "whatsapp_web"] },
+        "templateName": { "type": "string" },
+        "triggerType": { "type": "string", "enum": ["automated_cron", "manual_admin"] },
         "sentAt": { "type": "string" },
-        "channel": { "type": "string", "enum": ["whatsapp_meta_api", "whatsapp_direct_web"] },
-        "status": { "type": "string", "enum": ["sent", "failed", "delivered"] },
-        "messagePreview": { "type": "string", "maxLength": 1000 },
-        "metaTemplateId": { "type": "string" },
-        "estimatedCostINR": { "type": "number" }
+        "deliveryStatus": { "type": "string", "enum": ["delivered", "read", "sent", "failed"] },
+        "messageText": { "type": "string", "maxLength": 1000 },
+        "costEstimateInr": { "type": "number" }
       },
-      "required": ["id", "studentId", "studentName", "studentPhone", "reminderType", "sentAt", "channel", "status"]
+      "required": ["id", "studentId", "studentName", "phone", "channel", "triggerType", "sentAt", "deliveryStatus"]
     },
     "ActivityLog": {
       "title": "ActivityLog",
@@ -123,12 +125,14 @@
       "properties": {
         "id": { "type": "string" },
         "timestamp": { "type": "string" },
-        "type": { "type": "string", "enum": ["check_in", "check_out", "seat_assigned", "seat_released", "payment_received", "reminder_sent", "expense_added", "settings_updated"] },
+        "adminName": { "type": "string", "maxLength": 100 },
+        "user": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
         "action": { "type": "string", "maxLength": 150 },
-        "details": { "type": "string", "maxLength": 500 },
-        "performedBy": { "type": "string" }
+        "targetType": { "type": "string", "enum": ["student", "seat", "attendance", "payment", "expense", "reminder", "system"] },
+        "details": { "type": "string", "maxLength": 500 }
       },
-      "required": ["id", "timestamp", "type", "action", "details"]
+      "required": ["id", "timestamp", "adminName", "role", "action", "targetType", "details"]
     },
     "SystemSettings": {
       "title": "SystemSettings",

@@ -15,6 +15,8 @@ import {
   CreditCard,
   Phone,
   RefreshCw,
+  ExternalLink,
+  Filter,
 } from 'lucide-react';
 
 interface StudentsViewProps {
@@ -45,6 +47,23 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [planFilter, setPlanFilter] = useState<string>('all');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'active' | 'expiring' | 'dues' | 'minors'>('all');
+
+  // Counts for quick chips
+  const now = new Date();
+  const warningDate = new Date();
+  warningDate.setDate(now.getDate() + 3);
+
+  const activeCount = students.filter(s => s.status === 'active').length;
+  const expiringCount = students.filter(s => {
+    const exp = new Date(s.membershipExpiry);
+    return s.status === 'expired' || exp <= warningDate;
+  }).length;
+  const duesCount = students.filter(s => {
+    const p = payments.find(pay => pay.studentId === s.id);
+    return p && p.pendingAmount > 0;
+  }).length;
+  const minorsCount = students.filter(s => s.isMinor).length;
 
   const filteredStudents = students.filter(s => {
     const matchesSearch =
@@ -56,7 +75,21 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
     const matchesPlan = planFilter === 'all' || s.planId === planFilter;
 
-    return matchesSearch && matchesStatus && matchesPlan;
+    // Quick filter check
+    let matchesQuick = true;
+    if (quickFilter === 'active') {
+      matchesQuick = s.status === 'active';
+    } else if (quickFilter === 'expiring') {
+      const exp = new Date(s.membershipExpiry);
+      matchesQuick = s.status === 'expired' || exp <= warningDate;
+    } else if (quickFilter === 'dues') {
+      const p = payments.find(pay => pay.studentId === s.id);
+      matchesQuick = Boolean(p && p.pendingAmount > 0);
+    } else if (quickFilter === 'minors') {
+      matchesQuick = Boolean(s.isMinor);
+    }
+
+    return matchesSearch && matchesStatus && matchesPlan && matchesQuick;
   });
 
   const handleExportCsv = () => {
@@ -102,15 +135,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Search Bar */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Header Bar */}
+      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-600" />
-            <span>Student & Membership Registry ({students.length} Enrolled)</span>
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold">
+              <Users className="w-4 h-4" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Student & Membership Registry ({students.length} Total Enrolled)
+            </h2>
+          </div>
           <p className="text-xs text-slate-500 mt-1">
-            Manage registrations, desk allocations, QR credential cards, and WhatsApp notifications.
+            Manage registrations, desk allocations, QR credential passes, and fee collection receipts.
           </p>
         </div>
 
@@ -118,7 +155,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           <button
             id="export-students-csv-btn"
             onClick={handleExportCsv}
-            className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-colors shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl transition-colors shadow-2xs flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
@@ -126,67 +163,131 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           <button
             id="open-add-student-btn"
             onClick={onOpenAddStudent}
-            className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors shadow-xs flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-xs flex items-center gap-1.5 ring-1 ring-slate-800"
           >
-            <UserPlus className="w-4 h-4 text-emerald-400" />
-            <span>Add New Student</span>
+            <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Register New Student</span>
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            id="search-students-input"
-            type="text"
-            placeholder="Search by Name, Student ID, Phone, Desk..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 text-slate-800"
-          />
+      {/* Filter and Quick Chips Bar */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+        {/* Quick Filter Chips */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-400 mr-1 flex items-center gap-1">
+            <Filter className="w-3 h-3" /> Filter:
+          </span>
+          <button
+            onClick={() => setQuickFilter('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+              quickFilter === 'all'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            All Students ({students.length})
+          </button>
+          <button
+            onClick={() => setQuickFilter('active')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+              quickFilter === 'active'
+                ? 'bg-emerald-800 text-white border-emerald-800 shadow-2xs'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Active ({activeCount})</span>
+          </button>
+          <button
+            onClick={() => setQuickFilter('expiring')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+              quickFilter === 'expiring'
+                ? 'bg-amber-800 text-white border-amber-800 shadow-2xs'
+                : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            <span>Expiring / Due ({expiringCount})</span>
+          </button>
+          <button
+            onClick={() => setQuickFilter('dues')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+              quickFilter === 'dues'
+                ? 'bg-rose-800 text-white border-rose-800 shadow-2xs'
+                : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5 text-rose-500" />
+            <span>Unpaid Dues ({duesCount})</span>
+          </button>
+          <button
+            onClick={() => setQuickFilter('minors')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
+              quickFilter === 'minors'
+                ? 'bg-indigo-800 text-white border-indigo-800 shadow-2xs'
+                : 'bg-indigo-50 text-indigo-800 border-indigo-200 hover:bg-indigo-100'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Minors ({minorsCount})</span>
+          </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <select
-            id="filter-student-status-select"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white text-slate-800 focus:outline-none focus:border-slate-900"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="expired">Expired</option>
-            <option value="suspended">Suspended</option>
-            <option value="inactive">Inactive</option>
-          </select>
+        {/* Search and Secondary Dropdowns */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-100">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              id="search-students-input"
+              type="text"
+              placeholder="Search by student name, ID (STU-1001), phone, or desk (A01)..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-slate-900 bg-slate-50/50 text-slate-800"
+            />
+          </div>
 
-          <select
-            id="filter-student-plan-select"
-            value={planFilter}
-            onChange={e => setPlanFilter(e.target.value)}
-            className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white text-slate-800 focus:outline-none focus:border-slate-900"
-          >
-            <option value="all">All Plans</option>
-            {plans.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              id="filter-student-status-select"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white text-slate-800 focus:outline-none focus:border-slate-900"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="suspended">Suspended</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            <select
+              id="filter-student-plan-select"
+              value={planFilter}
+              onChange={e => setPlanFilter(e.target.value)}
+              className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white text-slate-800 focus:outline-none focus:border-slate-900"
+            >
+              <option value="all">All Plans</option>
+              {plans.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Students Data Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-4 py-3">Student & ID</th>
-                <th className="px-4 py-3">Phone & Contact</th>
-                <th className="px-4 py-3">Desk</th>
+                <th className="px-4 py-3">Contact Details</th>
+                <th className="px-4 py-3">Allocated Desk</th>
                 <th className="px-4 py-3">Plan</th>
                 <th className="px-4 py-3">Validity</th>
                 <th className="px-4 py-3">Fee Status</th>
@@ -201,19 +302,23 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   const isExpiringSoon =
                     new Date(student.membershipExpiry).getTime() - Date.now() <=
                     3 * 24 * 60 * 60 * 1000;
+                  const isExpired = student.status === 'expired' || new Date(student.membershipExpiry) < new Date();
 
                   return (
-                    <tr key={student.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* Name & ID */}
+                    <tr key={student.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Name & ID with initial avatar */}
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
+                            {student.fullName.charAt(0)}
+                          </div>
                           <div>
                             <div className="font-bold text-slate-900 flex items-center gap-1.5">
                               <span>{student.fullName}</span>
                               {student.isMinor && (
                                 <span
                                   title="Minor: Guardian Consent Verified"
-                                  className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-semibold border border-amber-200 flex items-center gap-0.5"
+                                  className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-bold border border-amber-300 flex items-center gap-0.5"
                                 >
                                   <ShieldCheck className="w-2.5 h-2.5 text-amber-700" />
                                   Minor
@@ -229,53 +334,64 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
                       {/* Phone / WhatsApp */}
                       <td className="px-4 py-3.5">
-                        <div className="font-mono text-slate-800 font-medium">
-                          {student.phone}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-slate-800 font-semibold">{student.phone}</span>
+                          <a
+                            href={`https://wa.me/${student.phone.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded"
+                            title="Direct WhatsApp Chat"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
                         </div>
                         <div className="text-[11px] text-slate-500 truncate max-w-[160px]">
-                          {student.email || 'No email'}
+                          {student.email || 'No email registered'}
                         </div>
                       </td>
 
                       {/* Desk */}
                       <td className="px-4 py-3.5 font-mono">
                         {student.assignedSeat ? (
-                          <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-900 font-bold border border-slate-200">
+                          <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold shadow-2xs">
                             {student.assignedSeat}
                           </span>
                         ) : (
-                          <span className="text-slate-400">Floating</span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[11px]">
+                            Floating
+                          </span>
                         )}
                       </td>
 
                       {/* Plan */}
                       <td className="px-4 py-3.5">
-                        <span className="font-semibold text-slate-800">
+                        <span className="font-bold text-slate-800">
                           {plan?.name || student.planId}
                         </span>
-                        <div className="text-[11px] text-slate-500">
-                          ₹{plan?.price || 1500}
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          ₹{plan?.price || 1500} / mo
                         </div>
                       </td>
 
                       {/* Validity & Status */}
                       <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-800">
+                        <div className="font-semibold text-slate-800 font-mono">
                           {student.membershipExpiry}
                         </div>
-                        <div>
+                        <div className="mt-0.5">
                           {student.status === 'active' ? (
                             isExpiringSoon ? (
-                              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                                 Expiring Soon
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                                 Active
                               </span>
                             )
                           ) : (
-                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 capitalize">
+                            <span className="text-[10px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 capitalize">
                               {student.status}
                             </span>
                           )}
@@ -286,13 +402,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       <td className="px-4 py-3.5">
                         {payment && payment.pendingAmount > 0 ? (
                           <div>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
                               ₹{payment.pendingAmount} Due
                             </span>
                           </div>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            Paid
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-max">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>Paid</span>
                           </span>
                         )}
                       </td>
@@ -305,7 +422,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                             id={`view-card-${student.id}`}
                             title="View / Print Digital QR ID Pass"
                             onClick={() => onViewStudentCard(student)}
-                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 shadow-2xs"
                           >
                             <QrCode className="w-4 h-4 text-indigo-600" />
                           </button>
@@ -313,9 +430,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           {/* WhatsApp Reminder Button */}
                           <button
                             id={`wa-reminder-${student.id}`}
-                            title="Send Automated WhatsApp Payment Reminder"
+                            title="Send WhatsApp Fee / Validity Notice"
                             onClick={() => onSendWhatsAppReminder(student)}
-                            className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200"
+                            className="p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200 shadow-2xs"
                           >
                             <Send className="w-4 h-4" />
                           </button>
@@ -325,7 +442,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                             id={`renew-${student.id}`}
                             title="Renew Membership Plan"
                             onClick={() => onRenewStudent(student)}
-                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 shadow-2xs"
                           >
                             <RefreshCw className="w-4 h-4 text-emerald-600" />
                           </button>
@@ -335,7 +452,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                             id={`edit-${student.id}`}
                             title="Edit Student Information"
                             onClick={() => onEditStudent(student)}
-                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200 shadow-2xs"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -346,8 +463,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-400">
-                    No students found matching current filters.
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                    <p className="font-semibold text-slate-600">No students match current search or filters.</p>
+                    <p className="text-xs text-slate-400 mt-1">Try changing the quick filter or search terms above.</p>
                   </td>
                 </tr>
               )}

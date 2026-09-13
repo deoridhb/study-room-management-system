@@ -56,8 +56,8 @@ service cloud.firestore {
     match /sessions/{sessionId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidId(sessionId) &&
-        incoming().keys().hasAll(['id', 'studentId', 'studentName', 'checkInTime', 'status', 'scanMethod']) &&
-        incoming().status in ['inside', 'completed'];
+        incoming().keys().hasAll(['id', 'studentId', 'studentName', 'seatNumber', 'checkInTime', 'status']) &&
+        incoming().status in ['inside', 'outside'];
       allow update: if isSignedIn() && isValidId(sessionId);
       allow delete: if isBootstrappedAdmin();
     }
@@ -66,9 +66,9 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidId(paymentId) &&
-        incoming().keys().hasAll(['id', 'receiptNumber', 'studentId', 'studentName', 'amountPaid', 'totalFee', 'paymentMethod', 'paymentDate']) &&
+        incoming().keys().hasAll(['id', 'receiptNo', 'studentId', 'studentName', 'amountPaid', 'totalFee', 'paymentMethod', 'paymentDate', 'status']) &&
         incoming().amountPaid is number &&
-        incoming().paymentMethod in ['cash', 'upi', 'bank_transfer'];
+        incoming().paymentMethod in ['cash', 'upi', 'bank_transfer', 'other'];
       allow update: if isSignedIn() && isValidId(paymentId);
       allow delete: if isBootstrappedAdmin();
     }
@@ -77,8 +77,9 @@ service cloud.firestore {
     match /expenses/{expenseId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidId(expenseId) &&
-        incoming().keys().hasAll(['id', 'category', 'title', 'amount', 'date', 'paymentMethod']) &&
-        incoming().amount is number;
+        incoming().keys().hasAll(['id', 'category', 'description', 'amount', 'date', 'paymentMethod']) &&
+        incoming().amount is number &&
+        incoming().paymentMethod in ['cash', 'upi', 'bank_transfer', 'other'];
       allow update: if isSignedIn() && isValidId(expenseId);
       allow delete: if isBootstrappedAdmin();
     }
@@ -87,7 +88,7 @@ service cloud.firestore {
     match /reminders/{reminderId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidId(reminderId) &&
-        incoming().keys().hasAll(['id', 'studentId', 'studentName', 'studentPhone', 'reminderType', 'sentAt', 'channel', 'status']);
+        incoming().keys().hasAll(['id', 'studentId', 'studentName', 'phone', 'channel', 'triggerType', 'sentAt', 'deliveryStatus']);
       allow update: if isSignedIn() && isValidId(reminderId);
       allow delete: if isBootstrappedAdmin();
     }
@@ -96,7 +97,7 @@ service cloud.firestore {
     match /activityLogs/{logId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidId(logId) &&
-        incoming().keys().hasAll(['id', 'timestamp', 'type', 'action', 'details']);
+        incoming().keys().hasAll(['id', 'timestamp', 'adminName', 'role', 'action', 'targetType', 'details']);
       allow update: if false; // Immutable audit log
       allow delete: if isBootstrappedAdmin();
     }
@@ -105,7 +106,7 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn() && isValidId(settingId) &&
-        incoming().keys().hasAll(['libraryName', 'totalSeats', 'currency']) &&
+        incoming().keys().hasAll(['libraryName', 'address', 'contactPhone', 'totalSeats']) &&
         incoming().libraryName is string && incoming().libraryName.size() <= 100;
       allow delete: if false;
     }
