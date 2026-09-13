@@ -1,0 +1,6 @@
+{
+  "name": "Study Room Management System",
+  "description": "Comprehensive cloud-based study room and reading hall management platform with QR attendance, live seat occupancy, fee tracking, expense budgeting, and automated WhatsApp payment reminders.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
