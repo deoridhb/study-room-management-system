@@ -217,9 +217,118 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
         </div>
       </div>
 
-      {/* Payment Dashboard Table (§13 PRD Format) */}
+      {/* Payment Dashboard List & Table (§13 PRD Format) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Cards (sm:hidden: No horizontal scrolling) */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {filteredPayments.length > 0 ? (
+            filteredPayments.map(payment => {
+              const student = students.find(s => s.id === payment.studentId);
+
+              return (
+                <div key={payment.id} className="p-3.5 space-y-2.5 hover:bg-slate-50/70 transition-colors">
+                  {/* Top: Receipt #, Date & Status */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                        {payment.receiptNo}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {payment.paymentDate}
+                      </span>
+                    </div>
+
+                    <div>
+                      {payment.status === 'paid' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Paid
+                        </span>
+                      ) : payment.status === 'partial' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                          <Clock className="w-3 h-3" />
+                          Partial
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Student & Plan */}
+                  <div>
+                    <div className="font-bold text-xs text-slate-900">{payment.studentName}</div>
+                    <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
+                      <span>{payment.studentId}</span>
+                      <span>•</span>
+                      <span className="text-slate-700 font-sans">{payment.planName}</span>
+                    </div>
+                  </div>
+
+                  {/* Financial Details */}
+                  <div className="grid grid-cols-3 gap-2 text-[11px] bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Paid</span>
+                      <span className="font-mono font-black text-emerald-700 text-xs">
+                        ₹{payment.amountPaid.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Due</span>
+                      {payment.pendingAmount > 0 ? (
+                        <span className="font-mono font-bold text-rose-600 text-xs">
+                          ₹{payment.pendingAmount.toLocaleString('en-IN')}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-slate-400 text-xs">₹0</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Method</span>
+                      <span className="uppercase text-[10px] font-semibold text-slate-600">
+                        {payment.paymentMethod.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                    {payment.pendingAmount > 0 && student && (
+                      <button
+                        id={`send-due-reminder-mob-${student.id}`}
+                        onClick={() => onSendReminder(student)}
+                        className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors inline-flex items-center gap-1 shadow-2xs"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Send Due Reminder</span>
+                      </button>
+                    )}
+
+                    <button
+                      id={`view-receipt-btn-mob-${payment.id}`}
+                      onClick={() => onViewReceipt(payment)}
+                      className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors inline-flex items-center gap-1 shadow-2xs"
+                    >
+                      <Receipt className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Receipt</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              No payment records found matching filters.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View (hidden sm:block) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
               <tr>

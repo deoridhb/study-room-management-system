@@ -132,16 +132,87 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
 
       {/* Budget Management Table (§15 PRD Format) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-            Budget Variance Analysis Table (§15)
+            Budget Variance Analysis (§15)
           </h3>
           <span className="text-[11px] text-slate-500">
             Variance = Budgeted − Actual
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Cards View (sm:hidden) */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {budgets.map(b => {
+            const categoryActual = expenses
+              .filter(e => e.category === b.category)
+              .reduce((sum, e) => sum + e.amount, 0);
+
+            const variance = b.budgetedAmount - categoryActual;
+            const percent =
+              b.budgetedAmount > 0
+                ? Math.round((categoryActual / b.budgetedAmount) * 100)
+                : 0;
+
+            return (
+              <div key={b.category} className="p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-slate-900">{b.label}</span>
+                  {variance >= 0 ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <CheckCircle2 className="w-3 h-3" />
+                      On Track
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-rose-700 font-semibold text-[10px] bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                      <AlertCircle className="w-3 h-3" />
+                      Over Budget
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-[11px] bg-slate-50/80 p-2 rounded-xl border border-slate-100 font-mono">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-sans">Budget</span>
+                    <span className="font-semibold text-slate-700">₹{b.budgetedAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-sans">Spent</span>
+                    <span className="font-bold text-slate-900">₹{categoryActual.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-sans">Variance</span>
+                    <span className={`font-bold ${variance >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                      {variance >= 0 ? '+' : ''}₹{variance.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono mb-1">
+                    <span>Utilization</span>
+                    <span className="font-bold">{percent}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        percent > 100
+                          ? 'bg-rose-500'
+                          : percent > 85
+                          ? 'bg-amber-500'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(100, percent)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table (hidden sm:block) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
               <tr>
@@ -226,9 +297,9 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
 
       {/* Individual Expense Ledger Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-            Operational Expenses Ledger ({filteredExpenses.length} Records)
+            Operational Expenses Ledger ({filteredExpenses.length})
           </h3>
 
           <select
@@ -245,7 +316,36 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
           </select>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Expense Cards (sm:hidden) */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {filteredExpenses.map(expense => (
+            <div key={expense.id} className="p-3.5 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-bold text-xs text-slate-900">{expense.description}</div>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">{expense.date} • {expense.paymentMethod.replace('_', ' ')}</div>
+                </div>
+                <div className="font-mono font-black text-slate-900 text-sm shrink-0">
+                  ₹{expense.amount.toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] pt-1">
+                <span className="capitalize font-semibold text-slate-700 px-2 py-0.5 bg-slate-100 rounded-md text-[10px]">
+                  {expense.category}
+                </span>
+                {expense.receiptRef && (
+                  <span className="text-slate-400 font-mono text-[10px]">
+                    Ref: {expense.receiptRef}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table (hidden sm:block) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
               <tr>

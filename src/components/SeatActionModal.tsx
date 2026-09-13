@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Seat, Student, AttendanceSession } from '../types';
-import { X, CheckCircle2, UserPlus, AlertOctagon, UserX, Clock } from 'lucide-react';
+import { X, CheckCircle2, UserPlus, AlertOctagon, UserX, Clock, UserCheck, LogOut } from 'lucide-react';
 
 interface SeatActionModalProps {
   seat: Seat | null;
@@ -13,6 +13,9 @@ interface SeatActionModalProps {
   onRelease?: (seatNumber: string) => void;
   onToggleMaintenance?: ((seatId: string) => void) | ((seatNumber: string, isMaintenance: boolean) => void);
   onToggleReserved?: (seatId: string) => void;
+  onOpenCheckInForSeat?: (seatNumber: string) => void;
+  onCheckIn?: (student: Student, seatNumber?: string) => void;
+  onCheckOut?: (student: Student) => void;
   onClose: () => void;
 }
 
@@ -27,6 +30,9 @@ export const SeatActionModal: React.FC<SeatActionModalProps> = ({
   onRelease,
   onToggleMaintenance,
   onToggleReserved,
+  onOpenCheckInForSeat,
+  onCheckIn,
+  onCheckOut,
   onClose,
 }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -46,21 +52,21 @@ export const SeatActionModal: React.FC<SeatActionModalProps> = ({
   return (
     <div
       id="seat-action-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4"
     >
       <div
         id="seat-action-modal-container"
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden"
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center h-10 w-10 rounded-xl bg-slate-900 text-white font-mono font-bold text-base shadow-sm">
+            <span className="flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-slate-900 text-white font-mono font-bold text-sm sm:text-base shadow-sm">
               {seat.seatNumber}
             </span>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Seat Details & Actions</h3>
-              <p className="text-xs text-slate-500 capitalize">Status: {seat.status}</p>
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base">Seat Details & Actions</h3>
+              <p className="text-[11px] sm:text-xs text-slate-500 capitalize">Status: {seat.status}</p>
             </div>
           </div>
           <button
@@ -73,7 +79,7 @@ export const SeatActionModal: React.FC<SeatActionModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {/* Current Live Occupant */}
           {currentOccupant && currentSession && (
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
@@ -88,6 +94,19 @@ export const SeatActionModal: React.FC<SeatActionModalProps> = ({
               </div>
               <p className="font-bold text-slate-900 text-sm">{currentOccupant.fullName}</p>
               <p className="text-slate-600 text-[11px]">ID: {currentOccupant.id} • 📱 {currentOccupant.phone}</p>
+              {onCheckOut && (
+                <button
+                  id="seat-occupant-checkout-btn"
+                  onClick={() => {
+                    onCheckOut(currentOccupant);
+                    onClose();
+                  }}
+                  className="mt-2.5 w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Check-out {currentOccupant.fullName}</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -152,6 +171,21 @@ export const SeatActionModal: React.FC<SeatActionModalProps> = ({
               </div>
             )}
           </div>
+
+          {/* Quick Check In to this desk */}
+          {seat.status !== 'occupied' && onOpenCheckInForSeat && (
+            <button
+              id="checkin-to-this-desk-btn"
+              onClick={() => {
+                onOpenCheckInForSeat(seat.seatNumber);
+                onClose();
+              }}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Check In Student to Desk {seat.seatNumber}</span>
+            </button>
+          )}
 
           {/* Seat Operations: Toggle Maintenance / Reserve */}
           <div className="grid grid-cols-2 gap-2 text-xs pt-1">

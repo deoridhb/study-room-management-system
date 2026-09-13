@@ -52,10 +52,10 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
         className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden print:shadow-none print:border-none print:w-full"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 print:hidden">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50 print:hidden">
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            <h3 className="font-semibold text-slate-800 text-sm">Student Digital ID & QR Credential</h3>
+            <h3 className="font-semibold text-slate-800 text-xs sm:text-sm">Student Digital ID & QR Pass</h3>
           </div>
           <button
             id="close-student-card-btn"
@@ -67,10 +67,10 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
         </div>
 
         {/* Card Body - Styled as a Premium Membership Smart ID Card */}
-        <div className="p-6">
+        <div className="p-3.5 sm:p-6 max-h-[80vh] overflow-y-auto">
           <div
             id="printable-student-card"
-            className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white p-6 shadow-xl border border-slate-700/60 relative overflow-hidden"
+            className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white p-4 sm:p-6 shadow-xl border border-slate-700/60 relative overflow-hidden"
           >
             {/* Background geometric accents */}
             <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
@@ -82,7 +82,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                 <p className="text-[10px] tracking-wider uppercase font-semibold text-emerald-400">
                   Authorized Student Pass
                 </p>
-                <h4 className="text-base font-bold text-white tracking-tight leading-snug">
+                <h4 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
                   {libraryName}
                 </h4>
               </div>
@@ -94,15 +94,15 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
             {/* Content: QR code & Student Info */}
             <div className="flex flex-col items-center">
               {/* High-Resolution QR Box */}
-              <div className="bg-white p-3 rounded-xl shadow-md border-2 border-slate-100 flex flex-col items-center mb-4">
+              <div className="bg-white p-2.5 sm:p-3 rounded-xl shadow-md border-2 border-slate-100 flex flex-col items-center mb-4">
                 {qrUrl ? (
                   <img
                     src={qrUrl}
                     alt={`QR Code for ${student.fullName}`}
-                    className="w-44 h-44 object-contain"
+                    className="w-36 h-36 sm:w-44 sm:h-44 object-contain"
                   />
                 ) : (
-                  <div className="w-44 h-44 flex items-center justify-center text-slate-400 text-xs">
+                  <div className="w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center text-slate-400 text-xs">
                     Generating QR...
                   </div>
                 )}
@@ -113,8 +113,8 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
 
               {/* Student Details */}
               <div className="w-full text-center space-y-1">
-                <h3 className="text-lg font-bold text-white tracking-wide">{student.fullName}</h3>
-                <p className="text-xs text-slate-300 font-medium flex items-center justify-center gap-1">
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-wide">{student.fullName}</h3>
+                <p className="text-xs text-slate-300 font-medium flex items-center justify-center gap-1 flex-wrap">
                   <span>📱 {student.phone}</span>
                   {student.isMinor && (
                     <span className="bg-amber-500/20 text-amber-300 border border-amber-400/30 text-[10px] px-1.5 py-0.5 rounded">
@@ -130,7 +130,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                   <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">
                     Assigned Seat
                   </span>
-                  <span className="text-sm font-bold text-emerald-400 font-mono">
+                  <span className="text-xs sm:text-sm font-bold text-emerald-400 font-mono">
                     {student.assignedSeat || 'Unassigned'}
                   </span>
                 </div>
@@ -138,7 +138,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                   <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-medium">
                     Valid Until
                   </span>
-                  <span className="text-sm font-semibold text-slate-200">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-200">
                     {student.membershipExpiry}
                   </span>
                 </div>
@@ -150,7 +150,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                   {student.status === 'active' ? (
                     <>
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-300 font-medium">Active Membership</span>
+                      <span className="text-emerald-300 font-medium">Active Pass</span>
                     </>
                   ) : (
                     <>
@@ -159,22 +159,22 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
                     </>
                   )}
                 </span>
-                <span className="text-[10px] text-slate-500">Scan at Entry/Exit Kiosk</span>
+                <span className="text-[10px] text-slate-500">Scan at Entry/Exit</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Modal Action Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 print:hidden">
-          <p className="text-xs text-slate-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50 print:hidden gap-3">
+          <p className="text-[11px] text-slate-500 hidden sm:block">
             Show on phone screen or print as ID card
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
             <button
               id="download-student-qr-btn"
               onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-sm"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               Download QR
@@ -182,7 +182,7 @@ export const StudentCardModal: React.FC<StudentCardModalProps> = ({
             <button
               id="print-student-card-btn"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors shadow-sm"
             >
               <Printer className="w-3.5 h-3.5" />
               Print Card

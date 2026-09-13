@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, MembershipPlan, Seat, PaymentRecord } from '../types';
+import { Student, MembershipPlan, Seat, PaymentRecord, AttendanceSession } from '../types';
 import { downloadCsv } from '../utils/exportCsv';
 import {
   Users,
@@ -17,6 +17,8 @@ import {
   RefreshCw,
   ExternalLink,
   Filter,
+  UserCheck,
+  LogOut,
 } from 'lucide-react';
 
 interface StudentsViewProps {
@@ -24,7 +26,11 @@ interface StudentsViewProps {
   plans: MembershipPlan[];
   seats: Seat[];
   payments: PaymentRecord[];
+  sessions?: AttendanceSession[];
   onOpenAddStudent: () => void;
+  onOpenCheckIn?: () => void;
+  onCheckInStudent?: (student: Student) => void;
+  onCheckOutStudent?: (student: Student) => void;
   onEditStudent: (student: Student) => void;
   onViewStudentCard: (student: Student) => void;
   onSendWhatsAppReminder: (student: Student) => void;
@@ -37,7 +43,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   plans,
   seats,
   payments,
+  sessions = [],
   onOpenAddStudent,
+  onOpenCheckIn,
+  onCheckInStudent,
+  onCheckOutStudent,
   onEditStudent,
   onViewStudentCard,
   onSendWhatsAppReminder,
@@ -152,6 +162,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {onOpenCheckIn && (
+            <button
+              id="top-checkin-student-btn"
+              onClick={onOpenCheckIn}
+              className="px-3.5 py-2 text-xs font-bold text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl transition-all shadow-2xs flex items-center gap-1.5"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Check In Student</span>
+            </button>
+          )}
           <button
             id="export-students-csv-btn"
             onClick={handleExportCsv}
@@ -279,9 +299,189 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         </div>
       </div>
 
-      {/* Students Data Table */}
+      {/* Students Data List & Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile Cards (sm:hidden: No horizontal scrolling required on phones) */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {filteredStudents.length > 0 ? (
+            filteredStudents.map(student => {
+              const plan = plans.find(p => p.id === student.planId);
+              const payment = payments.find(p => p.studentId === student.id);
+              const isExpiringSoon =
+                new Date(student.membershipExpiry).getTime() - Date.now() <=
+                3 * 24 * 60 * 60 * 1000;
+              const isExpired = student.status === 'expired' || new Date(student.membershipExpiry) < new Date();
+
+              return (
+                <div key={student.id} className="p-3.5 space-y-2.5 hover:bg-slate-50/70 transition-colors">
+                  {/* Top: Name, ID, Desk */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
+                        {student.fullName.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs text-slate-900 truncate flex items-center gap-1.5">
+                          <span>{student.fullName}</span>
+                          {student.isMinor && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-bold border border-amber-300">
+                              Minor
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          {student.id}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 font-mono">
+                      {student.assignedSeat ? (
+                        <span className="px-2 py-0.5 rounded-lg bg-slate-900 text-white font-bold text-xs shadow-2xs">
+                          {student.assignedSeat}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px]">
+                          Floating
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Middle: Details Grid */}
+                  <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Phone</span>
+                      <a
+                        href={`tel:${student.phone}`}
+                        className="font-mono font-semibold text-slate-800 hover:underline"
+                      >
+                        {student.phone}
+                      </a>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Fee Status</span>
+                      {payment && payment.pendingAmount > 0 ? (
+                        <span className="font-bold text-rose-700 text-[11px]">
+                          ₹{payment.pendingAmount} Due
+                        </span>
+                      ) : (
+                        <span className="font-bold text-emerald-700 text-[11px] flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Paid</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Plan</span>
+                      <span className="font-medium text-slate-700 truncate block">
+                        {plan?.name || student.planId}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Validity</span>
+                      <span className="font-mono text-slate-700 block">
+                        {student.membershipExpiry}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-1.5">
+                    <div>
+                      {student.status === 'active' ? (
+                        isExpiringSoon ? (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                            Expiring Soon
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            Active
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-[10px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 capitalize">
+                          {student.status}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {/* Check-In or Check-Out button */}
+                      {sessions.some(s => s.studentId === student.id && s.status === 'inside') ? (
+                        <button
+                          id={`checkout-mob-${student.id}`}
+                          title="Currently Inside - Click to Check Out"
+                          onClick={() => onCheckOutStudent?.(student)}
+                          className="px-2 py-1 text-[11px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 shadow-2xs flex items-center gap-1"
+                        >
+                          <LogOut className="w-3 h-3" />
+                          <span>Out</span>
+                        </button>
+                      ) : (
+                        <button
+                          id={`checkin-mob-${student.id}`}
+                          title="Check In Student"
+                          onClick={() => onCheckInStudent?.(student)}
+                          className="px-2 py-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 shadow-2xs flex items-center gap-1"
+                        >
+                          <UserCheck className="w-3 h-3 text-emerald-600" />
+                          <span>Check In</span>
+                        </button>
+                      )}
+
+                      <button
+                        id={`view-card-mob-${student.id}`}
+                        title="View / Print Digital QR ID Pass"
+                        onClick={() => onViewStudentCard(student)}
+                        className="p-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 shadow-2xs"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        id={`wa-reminder-mob-${student.id}`}
+                        title="Send WhatsApp Notice"
+                        onClick={() => onSendWhatsAppReminder(student)}
+                        className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 shadow-2xs"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        id={`renew-mob-${student.id}`}
+                        title="Renew Plan"
+                        onClick={() => onRenewStudent(student)}
+                        className="p-1.5 text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
+                      </button>
+
+                      <button
+                        id={`edit-mob-${student.id}`}
+                        title="Edit Student"
+                        onClick={() => onEditStudent(student)}
+                        className="p-1.5 text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-slate-400 text-xs">
+              No students match current search or filters.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table (hidden sm:block) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
               <tr>
@@ -417,6 +617,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       {/* Actions */}
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Quick Check-In / Check-Out */}
+                          {sessions.some(s => s.studentId === student.id && s.status === 'inside') ? (
+                            <button
+                              id={`checkout-btn-${student.id}`}
+                              title="Currently inside - click to check out"
+                              onClick={() => onCheckOutStudent?.(student)}
+                              className="px-2 py-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 shadow-2xs flex items-center gap-1"
+                            >
+                              <LogOut className="w-3 h-3 text-rose-600" />
+                              <span>Check Out</span>
+                            </button>
+                          ) : (
+                            <button
+                              id={`checkin-btn-${student.id}`}
+                              title="Check In Student to Study Hall"
+                              onClick={() => onCheckInStudent?.(student)}
+                              className="px-2.5 py-1 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 shadow-2xs flex items-center gap-1"
+                            >
+                              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Check In</span>
+                            </button>
+                          )}
+
                           {/* QR Card Button */}
                           <button
                             id={`view-card-${student.id}`}

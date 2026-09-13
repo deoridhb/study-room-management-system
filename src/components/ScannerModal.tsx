@@ -141,8 +141,8 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
 
     // Find student matching either qrToken or student ID
     const student = (students || []).find(
-      s => s.qrToken.toLowerCase() === cleanToken.toLowerCase() ||
-           s.id.toLowerCase() === cleanToken.toLowerCase()
+      s => (s.qrToken && s.qrToken.toLowerCase() === cleanToken.toLowerCase()) ||
+           (s.id && s.id.toLowerCase() === cleanToken.toLowerCase())
     );
 
     if (!student) {
@@ -258,21 +258,21 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
       className="fixed inset-0 z-50 flex flex-col bg-slate-950 text-white select-none overflow-hidden"
     >
       {/* Top Kiosk Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-slate-900 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-            <QrCode className="w-6 h-6" />
+      <div className="flex items-center justify-between px-3.5 sm:px-6 py-2.5 sm:py-4 bg-slate-900 border-b border-slate-800 gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+            <QrCode className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              <span>{libraryName}</span>
-              <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium">
-                Kiosk Scanner
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-lg font-bold text-white tracking-tight flex items-center gap-2 truncate">
+              <span className="truncate">{libraryName}</span>
+              <span className="text-[10px] sm:text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded-full font-medium shrink-0">
+                Kiosk
               </span>
             </h1>
-            <p className="text-xs text-slate-400 flex items-center gap-3">
-              <span>Automated QR Entry & Exit Terminal</span>
-              <span>•</span>
+            <p className="text-[10px] sm:text-xs text-slate-400 flex items-center gap-2 truncate">
+              <span className="truncate hidden sm:inline">Automated Entry & Exit Terminal</span>
+              <span className="hidden sm:inline">•</span>
               <span className="text-slate-300 font-semibold font-mono">
                 Inside: {insideCount} / 30
               </span>
@@ -281,22 +281,22 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
         </div>
 
         {/* Status Indicators & Exit */}
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
             <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
             <span>Audio Cue Active</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs">
+          <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs">
             {isOffline ? (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-amber-300 font-medium">Offline Queue (Active)</span>
+                <span className="text-amber-300 font-medium hidden sm:inline">Offline</span>
               </>
             ) : (
               <>
                 <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-300 font-medium">Online & Synced</span>
+                <span className="text-emerald-300 font-medium hidden sm:inline">Online</span>
               </>
             )}
           </div>
@@ -304,16 +304,16 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
           <button
             id="close-kiosk-btn"
             onClick={onClose}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
           >
             <X className="w-4 h-4" />
-            <span>Close Kiosk</span>
+            <span className="hidden sm:inline">Close</span>
           </button>
         </div>
       </div>
 
       {/* Main Kiosk Content */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-y-auto">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-3.5 sm:p-6 overflow-y-auto">
         {/* Left Column: Scanner viewport & instructions (7 cols) */}
         <div className="lg:col-span-7 flex flex-col items-center justify-center space-y-6">
           {/* Instructions Banner */}
@@ -547,7 +547,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
                           : 'text-rose-400 bg-rose-950/40'
                       }`}
                     >
-                      {scan.type.toUpperCase()} • {scan.timestamp}
+                      {(scan.type || 'scan').toUpperCase()} • {scan.timestamp}
                     </span>
                   </div>
                 ))}

@@ -57,24 +57,24 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header & Status Summary Bar */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold">
+            <div className="h-8 w-8 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold shrink-0">
               <Grid3X3 className="w-4 h-4" />
             </div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-              Interactive Visual Seat Map & Desk Allocations
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              Interactive Visual Seat Map
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time reading hall layout ({seats.length} total desks). Click any desk to assign, release, or check-in students.
+            Real-time reading hall layout ({seats.length} total desks). Tap any desk to assign, release, or check-in.
           </p>
         </div>
 
         {/* Live Occupancy Metric Mini Bar */}
-        <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl shrink-0">
-          <div className="text-right">
+        <div className="flex items-center justify-between sm:justify-start gap-3 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl shrink-0">
+          <div>
             <div className="text-xs font-bold text-slate-900 font-mono">
               {occupiedCount} / {seats.length} Desks Full
             </div>
@@ -82,7 +82,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
               {occupancyPercent}% Occupancy Rate
             </div>
           </div>
-          <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden hidden sm:block">
+          <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden shrink-0">
             <div
               className="h-full bg-emerald-500 rounded-full transition-all duration-500"
               style={{ width: `${occupancyPercent}%` }}
@@ -92,7 +92,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
       </div>
 
       {/* Filter and Search Controls */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
         {/* Search input */}
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -110,7 +110,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
           <button
             id="filter-seat-all"
             onClick={() => setFilterStatus('all')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
+            className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl border transition-all ${
               filterStatus === 'all'
                 ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
@@ -121,7 +121,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
           <button
             id="filter-seat-occupied"
             onClick={() => setFilterStatus('occupied')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
               filterStatus === 'occupied'
                 ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
@@ -133,7 +133,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
           <button
             id="filter-seat-available"
             onClick={() => setFilterStatus('available')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
               filterStatus === 'available'
                 ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
@@ -145,7 +145,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
           <button
             id="filter-seat-reserved"
             onClick={() => setFilterStatus('reserved')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
               filterStatus === 'reserved'
                 ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
@@ -157,7 +157,7 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
           <button
             id="filter-seat-maintenance"
             onClick={() => setFilterStatus('maintenance')}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 ${
               filterStatus === 'maintenance'
                 ? 'bg-rose-700 text-white border-rose-700 shadow-2xs'
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
@@ -170,10 +170,10 @@ export const SeatMapView: React.FC<SeatMapViewProps> = ({
       </div>
 
       {/* Hall Front Stage / Entry Indicator */}
-      <div className="w-full max-w-xl mx-auto py-2.5 px-6 bg-slate-100 rounded-2xl border border-slate-200 text-center text-xs font-extrabold text-slate-500 uppercase tracking-widest flex items-center justify-center gap-2 shadow-2xs">
-        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-        <span>Main Reading Lounge Entrance & QR Kiosk Scanner Area</span>
-        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+      <div className="w-full max-w-xl mx-auto py-2 px-3 sm:px-6 bg-slate-100 rounded-2xl border border-slate-200 text-center text-[10px] sm:text-xs font-extrabold text-slate-500 uppercase tracking-widest flex items-center justify-center gap-2 shadow-2xs">
+        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+        <span className="truncate">Main Reading Lounge Entrance & QR Kiosk</span>
+        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
       </div>
 
       {/* Visual Desk Grid by Rows */}

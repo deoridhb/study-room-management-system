@@ -76,6 +76,7 @@ import { StudentFormModal } from './components/StudentFormModal';
 import { RecordPaymentModal } from './components/RecordPaymentModal';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { CommandPaletteModal } from './components/CommandPaletteModal';
+import { CheckInModal } from './components/CheckInModal';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export default function App() {
@@ -146,6 +147,10 @@ export default function App() {
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<PaymentRecord | null>(null);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [checkInPreselectedStudent, setCheckInPreselectedStudent] = useState<Student | null>(null);
+  const [checkInPreselectedSeatNumber, setCheckInPreselectedSeatNumber] = useState<string | null>(null);
 
   // Toast Notification state
   const [toast, setToast] = useState<{
@@ -487,6 +492,92 @@ export default function App() {
   // Manual Check-out
   const handleCheckOut = (student: Student) => {
     handleStudentScan(student);
+  };
+
+  // Check-In Student Modal Handlers
+  const handleOpenCheckIn = (student?: Student | null, seatNumber?: string | null) => {
+    setCheckInPreselectedStudent(student || null);
+    setCheckInPreselectedSeatNumber(seatNumber || null);
+    setIsCheckInModalOpen(true);
+  };
+
+  // Direct Unified Check-In (works immediately from anywhere)
+  const handleCheckIn = (student: Student, deskOverride?: string, overrideExpired = true) => {
+    // Check if student is already inside
+    const existingSession = sessions.find(
+      s => s.studentId === student.id && s.status === 'inside'
+    );
+    if (existingSession) {
+      playErrorSound();
+      showToast(`${student.fullName} is already checked in at Desk ${existingSession.seatNumber}.`, 'info');
+      return;
+    }
+
+    const isExpired =
+      student.status === 'expired' ||
+      new Date(student.membershipExpiry).getTime() < Date.now() - 24 * 60 * 60 * 1000;
+
+    // Pick desk: deskOverride -> student.assignedSeat -> first available desk -> fallback
+    let targetSeatNumber = deskOverride || student.assignedSeat;
+    let targetSeat = seats.find(s => s.seatNumber === targetSeatNumber && s.status !== 'maintenance');
+
+    if (!targetSeat || targetSeat.status === 'occupied') {
+      targetSeat = seats.find(s => s.status === 'available');
+      if (targetSeat) {
+        targetSeatNumber = targetSeat.seatNumber;
+      }
+    }
+
+    if (!targetSeatNumber) {
+      targetSeatNumber = 'A01';
+    }
+
+    const now = new Date();
+    const newSession: AttendanceSession = {
+      id: `sess_${Date.now()}`,
+      studentId: student.id,
+      studentName: student.fullName,
+      seatNumber: targetSeatNumber,
+      checkInTime: now.toISOString(),
+      status: 'inside',
+      isManualOverride: isExpired,
+    };
+
+    setSessions(prev => [newSession, ...prev]);
+    saveSessionDoc(newSession).catch(() => {});
+
+    // Update seat to occupied
+    setSeats(prev =>
+      prev.map(s => {
+        if (s.seatNumber === targetSeatNumber) {
+          const updatedSeat: Seat = {
+            ...s,
+            status: 'occupied',
+            currentOccupantStudentId: student.id,
+          };
+          saveSeatDoc(updatedSeat).catch(() => {});
+          return updatedSeat;
+        }
+        return s;
+      })
+    );
+
+    playCheckInSound();
+    if (isExpired) {
+      showToast(`Checked in: ${student.fullName} at Desk ${targetSeatNumber} (Membership expired, override active).`, 'warning');
+    } else {
+      showToast(`Checked in: ${student.fullName} at Desk ${targetSeatNumber}. Welcome!`, 'success');
+    }
+    addActivityLog(
+      'Student Entry Recorded',
+      `${student.fullName} checked in at Desk ${targetSeatNumber}${isExpired ? ' (Expired Override)' : ''}.`,
+      'attendance'
+    );
+    setIsCheckInModalOpen(false);
+  };
+
+  const handleDirectCheckIn = (student: Student, chosenSeatNumber: string, overrideExpired = false) => {
+    handleCheckIn(student, chosenSeatNumber, overrideExpired);
   };
 
   // Manual Override (§8)
@@ -956,12 +1047,12 @@ export default function App() {
   }).length;
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans antialiased selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans antialiased selection:bg-indigo-100 selection:text-indigo-900 w-full max-w-full overflow-x-hidden">
       {/* Toast Notification Banner */}
       {toast && (
         <div
           id="global-toast-notification"
-          className={`fixed top-4 right-4 z-50 max-w-md p-3.5 rounded-2xl shadow-xl border flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-2 duration-200 ${
+          className={`fixed top-3 right-3 left-3 sm:left-auto sm:right-4 sm:top-4 z-50 max-w-md p-3.5 rounded-2xl shadow-xl border flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-2 duration-200 ${
             toast.type === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-950'
               : toast.type === 'info'
@@ -998,25 +1089,37 @@ export default function App() {
         totalSeats={seats.length}
         seats={seats}
         students={students}
+        pendingPaymentCount={pendingPaymentCount}
+        expiringCount={expiringCount}
         onRoleChange={setRole}
         onOpenScanner={() => setIsScannerOpen(true)}
+        onOpenCheckIn={() => handleOpenCheckIn()}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        onOpenMobileMenu={() => setIsMobileDrawerOpen(true)}
         currentUser={currentUser}
         isFirebaseConnected={isFirebaseConnected}
         onLogin={handleLogin}
         onLogout={handleLogout}
       />
 
-      {/* Navigation Bar */}
+      {/* Navigation Bar & Mobile Navigation Suite */}
       <Navigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
         pendingPaymentCount={pendingPaymentCount}
         expiringCount={expiringCount}
+        isMobileDrawerOpen={isMobileDrawerOpen}
+        onCloseMobileDrawer={() => setIsMobileDrawerOpen(false)}
+        onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)}
+        libraryName={settings.libraryName}
+        role={role}
+        onRoleChange={setRole}
+        onOpenScanner={() => setIsScannerOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Content Area (pb-28 on mobile/tablet so persistent bottom bar never obscures content) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6 pb-28 md:pb-8 min-w-0">
         {activeTab === 'dashboard' && (
           <DashboardView
             students={students}
@@ -1027,6 +1130,8 @@ export default function App() {
             reminders={reminders}
             activityLogs={activityLogs}
             onOpenScanner={() => setIsScannerOpen(true)}
+            onOpenCheckIn={() => handleOpenCheckIn()}
+            onCheckIn={handleCheckIn}
             onOpenAddStudent={() => {
               setEditingStudent(null);
               setIsAddStudentOpen(true);
@@ -1035,6 +1140,7 @@ export default function App() {
               setPaymentPreselectedStudent(undefined);
               setIsRecordPaymentOpen(true);
             }}
+            onOpenAddExpense={() => setIsAddExpenseOpen(true)}
             onOpenWhatsAppReminders={() => setActiveTab('whatsapp')}
             onCheckOut={handleCheckOut}
             onNavigateToTab={setActiveTab}
@@ -1057,10 +1163,14 @@ export default function App() {
             plans={plans}
             seats={seats}
             payments={payments}
+            sessions={sessions}
             onOpenAddStudent={() => {
               setEditingStudent(null);
               setIsAddStudentOpen(true);
             }}
+            onOpenCheckIn={() => handleOpenCheckIn()}
+            onCheckInStudent={student => handleOpenCheckIn(student)}
+            onCheckOutStudent={handleCheckOut}
             onEditStudent={student => {
               setEditingStudent(student);
               setIsAddStudentOpen(true);
@@ -1078,7 +1188,8 @@ export default function App() {
             sessions={sessions}
             seats={seats}
             onOpenScanner={() => setIsScannerOpen(true)}
-            onCheckIn={handleStudentScan}
+            onOpenCheckInModal={() => handleOpenCheckIn()}
+            onCheckIn={handleCheckIn}
             onCheckOut={handleCheckOut}
             onManualOverride={handleManualOverride}
           />
@@ -1145,7 +1256,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+      <footer className="bg-white border-t border-slate-200 py-4 mb-16 sm:mb-0 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
             {settings.libraryName} • Automated Study Room Management System v3
@@ -1211,6 +1322,9 @@ export default function App() {
         }}
         onRelease={handleReleaseSeat}
         onToggleMaintenance={handleToggleMaintenance}
+        onOpenCheckInForSeat={seatNum => handleOpenCheckIn(null, seatNum)}
+        onCheckIn={(student, seatNum) => handleCheckIn(student, seatNum)}
+        onCheckOut={handleCheckOut}
       />
 
       {/* 5. Add / Edit Student Registration Modal */}
@@ -1268,7 +1382,7 @@ export default function App() {
           setIsCommandPaletteOpen(false);
         }}
         onCheckInStudent={student => {
-          handleStudentScan(student);
+          handleOpenCheckIn(student);
         }}
         onCheckOutStudent={student => {
           handleCheckOut(student);
@@ -1291,6 +1405,25 @@ export default function App() {
           setIsCommandPaletteOpen(false);
         }}
       />
+
+      {/* 9. Direct Student Check-In Modal */}
+      {isCheckInModalOpen && (
+        <CheckInModal
+          isOpen={isCheckInModalOpen}
+          onClose={() => {
+            setIsCheckInModalOpen(false);
+            setCheckInPreselectedStudent(null);
+            setCheckInPreselectedSeatNumber(null);
+          }}
+          students={students}
+          seats={seats}
+          sessions={sessions}
+          onCheckIn={handleDirectCheckIn}
+          onCheckOut={handleCheckOut}
+          preselectedStudent={checkInPreselectedStudent}
+          preselectedSeatNumber={checkInPreselectedSeatNumber}
+        />
+      )}
     </div>
   );
 }

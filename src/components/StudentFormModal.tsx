@@ -127,31 +127,31 @@ export const StudentFormModal: React.FC<StudentFormModalProps> = ({
   return (
     <div
       id="student-form-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4"
     >
       <div
         id="student-form-modal-container"
-        className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6"
+        className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-indigo-600" />
-            <h3 className="font-bold text-slate-800 text-base">
-              {studentToEdit ? `Edit Student: ${studentToEdit.fullName}` : 'Register New Student'}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <UserPlus className="w-5 h-5 text-indigo-600 shrink-0" />
+            <h3 className="font-bold text-slate-800 text-sm sm:text-base truncate">
+              {studentToEdit ? `Edit: ${studentToEdit.fullName}` : 'Register New Student'}
             </h3>
           </div>
           <button
             id="close-student-form-btn"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">

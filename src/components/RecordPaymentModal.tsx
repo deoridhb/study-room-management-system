@@ -105,16 +105,16 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   return (
     <div
       id="record-payment-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3.5 sm:p-4"
     >
       <div
         id="record-payment-modal-container"
-        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
+        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50 shrink-0">
           <div className="flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-bold text-slate-800 text-base">Record Fee Payment</h3>
+            <h3 className="font-bold text-slate-800 text-sm sm:text-base">Record Fee Payment</h3>
           </div>
           <button
             id="close-record-payment-btn"
@@ -125,7 +125,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 text-xs overflow-y-auto flex-1">
           <div>
             <label className="block font-semibold text-slate-700 mb-1">Student</label>
             <select

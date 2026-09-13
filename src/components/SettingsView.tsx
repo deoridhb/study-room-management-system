@@ -44,11 +44,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Settings className="w-5 h-5 text-indigo-600" />
-            <span>Library Configuration & Audit Trail (§20 & §22)</span>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Settings className="w-5 h-5 text-indigo-600 shrink-0" />
+            <span>Library Configuration & Audit Trail</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Manage study hall parameters, WhatsApp reminder triggers, and system audit logs.
@@ -56,7 +56,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {savedSuccess && (
-          <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs">
+          <div className="px-3 py-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs shrink-0">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>Settings saved successfully!</span>
           </div>
@@ -65,7 +65,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Settings Form (7 cols) */}
-        <div className="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
             {/* Library Profile */}
             <div className="pb-4 border-b border-slate-100">
@@ -262,11 +262,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
               <button
                 type="button"
                 onClick={onResetData}
-                className="px-3 py-2 text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="px-3 py-2 text-rose-700 hover:bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset to Seed Demo Data</span>
@@ -274,7 +274,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <button
                 type="submit"
-                className="px-5 py-2 text-white bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-semibold shadow-xs transition-colors"
+                className="px-5 py-2 text-white bg-slate-900 hover:bg-slate-800 rounded-xl text-xs font-semibold shadow-xs transition-colors text-center"
               >
                 Save Settings
               </button>
@@ -283,7 +283,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Audit Trail Log Stream (5 cols) */}
-        <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
