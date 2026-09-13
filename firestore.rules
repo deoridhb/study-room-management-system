@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        (request.auth.token.email == 'dhrubadeori@gmail.com' ||
+         exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(studentId) &&
+        incoming().keys().hasAll(['id', 'fullName', 'phone', 'planId', 'membershipStart', 'membershipExpiry', 'status', 'qrToken']) &&
+        incoming().fullName is string && incoming().fullName.size() <= 100 &&
+        incoming().phone is string && incoming().phone.size() <= 20 &&
+        incoming().status in ['active', 'expired', 'inactive'];
+      allow update: if isSignedIn() && isValidId(studentId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Seats collection
+    match /seats/{seatId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(seatId) &&
+        incoming().keys().hasAll(['id', 'seatNumber', 'row', 'col', 'status']) &&
+        incoming().status in ['available', 'occupied', 'reserved', 'maintenance'];
+      allow update: if isSignedIn() && isValidId(seatId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Attendance sessions collection
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(sessionId) &&
+        incoming().keys().hasAll(['id', 'studentId', 'studentName', 'checkInTime', 'status', 'scanMethod']) &&
+        incoming().status in ['inside', 'completed'];
+      allow update: if isSignedIn() && isValidId(sessionId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(paymentId) &&
+        incoming().keys().hasAll(['id', 'receiptNumber', 'studentId', 'studentName', 'amountPaid', 'totalFee', 'paymentMethod', 'paymentDate']) &&
+        incoming().amountPaid is number &&
+        incoming().paymentMethod in ['cash', 'upi', 'bank_transfer'];
+      allow update: if isSignedIn() && isValidId(paymentId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Expenses collection
+    match /expenses/{expenseId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(expenseId) &&
+        incoming().keys().hasAll(['id', 'category', 'title', 'amount', 'date', 'paymentMethod']) &&
+        incoming().amount is number;
+      allow update: if isSignedIn() && isValidId(expenseId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // WhatsApp Reminder logs collection
+    match /reminders/{reminderId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(reminderId) &&
+        incoming().keys().hasAll(['id', 'studentId', 'studentName', 'studentPhone', 'reminderType', 'sentAt', 'channel', 'status']);
+      allow update: if isSignedIn() && isValidId(reminderId);
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // Activity logs collection
+    match /activityLogs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(logId) &&
+        incoming().keys().hasAll(['id', 'timestamp', 'type', 'action', 'details']);
+      allow update: if false; // Immutable audit log
+      allow delete: if isBootstrappedAdmin();
+    }
+
+    // System Settings collection
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(settingId) &&
+        incoming().keys().hasAll(['libraryName', 'totalSeats', 'currency']) &&
+        incoming().libraryName is string && incoming().libraryName.size() <= 100;
+      allow delete: if false;
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isBootstrappedAdmin();
+    }
+  }
+}

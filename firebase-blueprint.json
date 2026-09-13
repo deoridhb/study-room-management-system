@@ -1,0 +1,203 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student registration and membership profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentNumber": { "type": "string" },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "email": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 200 },
+        "emergencyContact": { "type": "string", "maxLength": 20 },
+        "isMinor": { "type": "boolean" },
+        "guardianConsent": { "type": "boolean" },
+        "planId": { "type": "string" },
+        "membershipStart": { "type": "string" },
+        "membershipExpiry": { "type": "string" },
+        "assignedSeat": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "expired", "inactive"] },
+        "qrToken": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "fullName", "phone", "planId", "membershipStart", "membershipExpiry", "status", "qrToken"]
+    },
+    "Seat": {
+      "title": "Seat",
+      "description": "Desk or study seat allocation status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "seatNumber": { "type": "string", "maxLength": 10 },
+        "row": { "type": "string", "maxLength": 5 },
+        "col": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "occupied", "reserved", "maintenance"] },
+        "assignedStudentId": { "type": "string" },
+        "currentOccupantStudentId": { "type": "string" },
+        "lastOccupiedTime": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["id", "seatNumber", "row", "col", "status"]
+    },
+    "AttendanceSession": {
+      "title": "AttendanceSession",
+      "description": "Daily check-in and check-out reading hall attendance session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "seatNumber": { "type": "string" },
+        "checkInTime": { "type": "string" },
+        "checkOutTime": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "status": { "type": "string", "enum": ["inside", "completed"] },
+        "scanMethod": { "type": "string", "enum": ["qr_camera", "manual_override"] },
+        "notes": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["id", "studentId", "studentName", "checkInTime", "status", "scanMethod"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Membership fee payment record and receipt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "receiptNumber": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "planId": { "type": "string" },
+        "amountPaid": { "type": "number" },
+        "totalFee": { "type": "number" },
+        "pendingAmount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "bank_transfer"] },
+        "transactionRef": { "type": "string", "maxLength": 100 },
+        "paymentDate": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 300 }
+      },
+      "required": ["id", "receiptNumber", "studentId", "studentName", "amountPaid", "totalFee", "paymentMethod", "paymentDate"]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "Operating overhead expense entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string", "enum": ["rent", "electricity", "internet", "maintenance", "cleaning", "supplies", "staff", "other"] },
+        "title": { "type": "string", "maxLength": 100 },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["cash", "upi", "bank_transfer"] },
+        "receiptRef": { "type": "string", "maxLength": 100 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "category", "title", "amount", "date", "paymentMethod"]
+    },
+    "ReminderLog": {
+      "title": "ReminderLog",
+      "description": "WhatsApp payment reminder dispatch audit log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentPhone": { "type": "string" },
+        "reminderType": { "type": "string", "enum": ["due_soon", "overdue"] },
+        "sentAt": { "type": "string" },
+        "channel": { "type": "string", "enum": ["whatsapp_meta_api", "whatsapp_direct_web"] },
+        "status": { "type": "string", "enum": ["sent", "failed", "delivered"] },
+        "messagePreview": { "type": "string", "maxLength": 1000 },
+        "metaTemplateId": { "type": "string" },
+        "estimatedCostINR": { "type": "number" }
+      },
+      "required": ["id", "studentId", "studentName", "studentPhone", "reminderType", "sentAt", "channel", "status"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "System event and security audit trail",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "type": { "type": "string", "enum": ["check_in", "check_out", "seat_assigned", "seat_released", "payment_received", "reminder_sent", "expense_added", "settings_updated"] },
+        "action": { "type": "string", "maxLength": 150 },
+        "details": { "type": "string", "maxLength": 500 },
+        "performedBy": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "type", "action", "details"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Hall settings and preferences",
+      "type": "object",
+      "properties": {
+        "libraryName": { "type": "string", "maxLength": 100 },
+        "contactPhone": { "type": "string", "maxLength": 20 },
+        "address": { "type": "string", "maxLength": 200 },
+        "totalSeats": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "openingTime": { "type": "string" },
+        "closingTime": { "type": "string" },
+        "gracePeriodDays": { "type": "number" },
+        "autoCheckoutHours": { "type": "number" },
+        "enableWhatsAppReminders": { "type": "boolean" },
+        "metaBusinessPhoneId": { "type": "string" },
+        "metaTemplateName": { "type": "string" }
+      },
+      "required": ["libraryName", "totalSeats", "currency"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator user profile",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Student roster and membership plans"
+    },
+    "/seats/{seatId}": {
+      "schema": "Seat",
+      "description": "Desk assignments and occupancy status"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "AttendanceSession",
+      "description": "Check-in and check-out logs"
+    },
+    "/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Fee payment records and receipts"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "ExpenseRecord",
+      "description": "Operational expenses"
+    },
+    "/reminders/{reminderId}": {
+      "schema": "ReminderLog",
+      "description": "WhatsApp payment reminders"
+    },
+    "/activityLogs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Audit trail of hall operations"
+    },
+    "/settings/{settingId}": {
+      "schema": "SystemSettings",
+      "description": "Study room global configuration"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Authorized admin users for RBAC"
+    }
+  }
+}

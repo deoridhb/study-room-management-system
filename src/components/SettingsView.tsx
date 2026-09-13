@@ -10,6 +10,8 @@ import {
   RotateCcw,
   CheckCircle2,
   FileText,
+  Cloud,
+  Database,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -17,6 +19,8 @@ interface SettingsViewProps {
   activityLogs: ActivityLog[];
   onUpdateSettings: (newSettings: SystemSettings) => void;
   onResetData: () => void;
+  onSyncToFirestore?: () => void;
+  isFirebaseConnected?: boolean;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -24,6 +28,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   activityLogs,
   onUpdateSettings,
   onResetData,
+  onSyncToFirestore,
+  isFirebaseConnected = true,
 }) => {
   const [formData, setFormData] = useState<SystemSettings>({ ...settings });
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -207,6 +213,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   }
                   className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
+              </div>
+            </div>
+
+            {/* Firebase Cloud Database & Auth Status */}
+            <div className="pb-4 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Cloud className="w-4 h-4 text-emerald-600" />
+                <span>Firebase Cloud Infrastructure</span>
+              </h3>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">Database Engine:</span>
+                  <span className="font-semibold text-slate-900 flex items-center gap-1">
+                    <Database className="w-3.5 h-3.5 text-emerald-600" />
+                    Cloud Firestore (NoSQL)
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">Project ID:</span>
+                  <span className="font-mono text-slate-800 font-medium">gen-lang-client-0238856667</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">Region:</span>
+                  <span className="font-mono text-slate-800 font-medium">asia-south1 (Mumbai)</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">Sync Status:</span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                    {isFirebaseConnected ? 'Real-time Listeners Active' : 'Connecting...'}
+                  </span>
+                </div>
+
+                {onSyncToFirestore && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={onSyncToFirestore}
+                      className="w-full py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Sync All Records to Firestore Now</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

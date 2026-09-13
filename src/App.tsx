@@ -26,6 +26,34 @@ import {
 } from './data/initialData';
 import { playCheckInSound, playCheckOutSound, playErrorSound } from './utils/audio';
 
+// Firebase & Cloud Firestore
+import {
+  auth,
+  testFirestoreConnection,
+  loginWithGoogle,
+  logoutUser,
+  subscribeToAuth,
+  subscribeToStudents,
+  subscribeToSeats,
+  subscribeToSessions,
+  subscribeToPayments,
+  subscribeToExpenses,
+  subscribeToReminders,
+  subscribeToActivityLogs,
+  subscribeToSettings,
+  saveStudentDoc,
+  deleteStudentDoc,
+  saveSeatDoc,
+  saveSessionDoc,
+  savePaymentDoc,
+  saveExpenseDoc,
+  saveReminderDoc,
+  saveActivityLogDoc,
+  saveSettingsDoc,
+  seedFirestoreIfEmpty,
+} from './firebase';
+import { User } from 'firebase/auth';
+
 // Components
 import { Header } from './components/Header';
 import { Navigation, TabType } from './components/Navigation';
@@ -102,6 +130,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [role, setRole] = useState<UserRole>('admin');
 
+  // Firebase Auth and Connection State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(true);
+
   // Active Modals state
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -163,6 +195,132 @@ export default function App() {
     localStorage.setItem('study_room_activity_logs', JSON.stringify(activityLogs));
   }, [activityLogs]);
 
+  // Firebase Lifecycle & Firestore Synchronization
+  useEffect(() => {
+    testFirestoreConnection().then(ok => setIsFirebaseConnected(ok));
+
+    const unsubscribeAuth = subscribeToAuth(user => {
+      setCurrentUser(user);
+      if (user) {
+        // Automatically seed Firestore with initial records if collections are empty
+        seedFirestoreIfEmpty(
+          INITIAL_STUDENTS,
+          INITIAL_SEATS,
+          INITIAL_SESSIONS,
+          INITIAL_PAYMENTS,
+          INITIAL_EXPENSES,
+          INITIAL_SETTINGS
+        );
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Real-time Firestore Listeners
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubStudents = subscribeToStudents(cloudStudents => {
+      if (cloudStudents && cloudStudents.length > 0) {
+        setStudents(cloudStudents);
+      }
+    });
+
+    const unsubSeats = subscribeToSeats(cloudSeats => {
+      if (cloudSeats && cloudSeats.length > 0) {
+        setSeats(cloudSeats);
+      }
+    });
+
+    const unsubSessions = subscribeToSessions(cloudSessions => {
+      if (cloudSessions && cloudSessions.length > 0) {
+        setSessions(cloudSessions);
+      }
+    });
+
+    const unsubPayments = subscribeToPayments(cloudPayments => {
+      if (cloudPayments && cloudPayments.length > 0) {
+        setPayments(cloudPayments);
+      }
+    });
+
+    const unsubExpenses = subscribeToExpenses(cloudExpenses => {
+      if (cloudExpenses && cloudExpenses.length > 0) {
+        setExpenses(cloudExpenses);
+      }
+    });
+
+    const unsubReminders = subscribeToReminders(cloudReminders => {
+      if (cloudReminders && cloudReminders.length > 0) {
+        setReminders(cloudReminders);
+      }
+    });
+
+    const unsubActivityLogs = subscribeToActivityLogs(cloudLogs => {
+      if (cloudLogs && cloudLogs.length > 0) {
+        setActivityLogs(cloudLogs);
+      }
+    });
+
+    const unsubSettings = subscribeToSettings(cloudSettings => {
+      if (cloudSettings) {
+        setSettings(cloudSettings);
+      }
+    });
+
+    return () => {
+      unsubStudents();
+      unsubSeats();
+      unsubSessions();
+      unsubPayments();
+      unsubExpenses();
+      unsubReminders();
+      unsubActivityLogs();
+      unsubSettings();
+    };
+  }, [currentUser]);
+
+  // Firebase Authentication Handlers
+  const handleLogin = async () => {
+    try {
+      const user = await loginWithGoogle();
+      showToast(`Welcome, ${user.displayName || user.email}! Connected to Firebase.`, 'success');
+      addActivityLog('Admin Signed In', `Authenticated as ${user.email} with Google via Firebase.`, 'system', user.displayName || 'Admin');
+    } catch (err: any) {
+      console.error('Sign-in error:', err);
+      showToast(err?.message || 'Failed to sign in with Google.', 'error');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      showToast('Signed out of Firebase session.', 'info');
+      addActivityLog('Admin Signed Out', 'Signed out of Firebase Authentication.', 'system');
+    } catch (err: any) {
+      console.error('Sign-out error:', err);
+      showToast(err?.message || 'Failed to sign out.', 'error');
+    }
+  };
+
+  const handleSyncToFirestore = async () => {
+    try {
+      showToast('Syncing all records to Firestore cloud database...', 'info');
+      for (const s of students) await saveStudentDoc(s);
+      for (const st of seats) await saveSeatDoc(st);
+      for (const se of sessions) await saveSessionDoc(se);
+      for (const p of payments) await savePaymentDoc(p);
+      for (const e of expenses) await saveExpenseDoc(e);
+      for (const r of reminders) await saveReminderDoc(r);
+      await saveSettingsDoc(settings);
+      showToast('Successfully synchronized all records to Firestore (asia-south1)!', 'success');
+    } catch (err: any) {
+      console.error('Sync error:', err);
+      showToast('Error syncing to Firestore: ' + (err?.message || 'Check connection'), 'error');
+    }
+  };
+
   // Log activity helper
   const addActivityLog = (
     action: string,
@@ -181,6 +339,7 @@ export default function App() {
       details,
     };
     setActivityLogs(prev => [newLog, ...prev]);
+    saveActivityLogDoc(newLog).catch(() => {});
   };
 
   // --- ATTENDANCE & SCAN ENGINE (§8, §9, §10) ---
@@ -215,18 +374,17 @@ export default function App() {
       const now = new Date();
       const diffMins = Math.max(1, Math.round((now.getTime() - checkInDate.getTime()) / (1000 * 60)));
 
+      const updatedSession: AttendanceSession = {
+        ...existingSession,
+        checkOutTime: now.toISOString(),
+        durationMinutes: diffMins,
+        status: 'outside',
+      };
+
       setSessions(prev =>
-        prev.map(s =>
-          s.id === existingSession.id
-            ? {
-                ...s,
-                checkOutTime: now.toISOString(),
-                durationMinutes: diffMins,
-                status: 'outside',
-              }
-            : s
-        )
+        prev.map(s => (s.id === existingSession.id ? updatedSession : s))
       );
+      saveSessionDoc(updatedSession).catch(() => {});
 
       // Free seat occupant
       setSeats(prev =>
@@ -234,11 +392,13 @@ export default function App() {
           if (st.currentOccupantStudentId === student.id) {
             // Keep assignedStudentId if dedicated, but clear current occupant and set available if no permanent reserve
             const isPermanentlyAssigned = st.assignedStudentId === student.id;
-            return {
+            const updatedSeat: Seat = {
               ...st,
               currentOccupantStudentId: undefined,
               status: isPermanentlyAssigned ? 'reserved' : 'available',
             };
+            saveSeatDoc(updatedSeat).catch(() => {});
+            return updatedSeat;
           }
           return st;
         })
@@ -287,18 +447,22 @@ export default function App() {
       };
 
       setSessions(prev => [newSession, ...prev]);
+      saveSessionDoc(newSession).catch(() => {});
 
       // Update seat status to occupied
       setSeats(prev =>
-        prev.map(s =>
-          s.seatNumber === targetSeatNumber
-            ? {
-                ...s,
-                status: 'occupied',
-                currentOccupantStudentId: student.id,
-              }
-            : s
-        )
+        prev.map(s => {
+          if (s.seatNumber === targetSeatNumber) {
+            const updatedSeat: Seat = {
+              ...s,
+              status: 'occupied',
+              currentOccupantStudentId: student.id,
+            };
+            saveSeatDoc(updatedSeat).catch(() => {});
+            return updatedSeat;
+          }
+          return s;
+        })
       );
 
       playCheckInSound();
@@ -338,16 +502,20 @@ export default function App() {
       };
 
       setSessions(prev => [newSession, ...prev]);
+      saveSessionDoc(newSession).catch(() => {});
       setSeats(prev =>
-        prev.map(s =>
-          s.seatNumber === targetSeatNumber
-            ? {
-                ...s,
-                status: 'occupied',
-                currentOccupantStudentId: student.id,
-              }
-            : s
-        )
+        prev.map(s => {
+          if (s.seatNumber === targetSeatNumber) {
+            const updatedSeat: Seat = {
+              ...s,
+              status: 'occupied',
+              currentOccupantStudentId: student.id,
+            };
+            saveSeatDoc(updatedSeat).catch(() => {});
+            return updatedSeat;
+          }
+          return s;
+        })
       );
 
       showToast(`Manual entry recorded for ${student.fullName} at Desk ${targetSeatNumber}.`, 'success');
@@ -363,29 +531,30 @@ export default function App() {
         const now = new Date();
         const diffMins = Math.max(1, Math.round((now.getTime() - checkInDate.getTime()) / (1000 * 60)));
 
+        const updatedSession: AttendanceSession = {
+          ...activeSession,
+          checkOutTime: now.toISOString(),
+          durationMinutes: diffMins,
+          status: 'outside',
+          isManualOverride: true,
+        };
+
         setSessions(prev =>
-          prev.map(s =>
-            s.id === activeSession.id
-              ? {
-                  ...s,
-                  checkOutTime: now.toISOString(),
-                  durationMinutes: diffMins,
-                  status: 'outside',
-                  isManualOverride: true,
-                }
-              : s
-          )
+          prev.map(s => (s.id === activeSession.id ? updatedSession : s))
         );
+        saveSessionDoc(updatedSession).catch(() => {});
 
         setSeats(prev =>
           prev.map(st => {
             if (st.currentOccupantStudentId === student.id) {
               const isPermanentlyAssigned = st.assignedStudentId === student.id;
-              return {
+              const updatedSeat: Seat = {
                 ...st,
                 currentOccupantStudentId: undefined,
                 status: isPermanentlyAssigned ? 'reserved' : 'available',
               };
+              saveSeatDoc(updatedSeat).catch(() => {});
+              return updatedSeat;
             }
             return st;
           })
@@ -412,16 +581,21 @@ export default function App() {
       };
 
       setStudents(prev => prev.map(s => (s.id === studentData.id ? updatedStudent : s)));
+      saveStudentDoc(updatedStudent).catch(() => {});
 
       // Sync assigned seat
       if (updatedStudent.assignedSeat) {
         setSeats(prev =>
           prev.map(seat => {
             if (seat.seatNumber === updatedStudent.assignedSeat) {
-              return { ...seat, assignedStudentId: updatedStudent.id };
+              const updated = { ...seat, assignedStudentId: updatedStudent.id };
+              saveSeatDoc(updated).catch(() => {});
+              return updated;
             }
             if (seat.assignedStudentId === updatedStudent.id && seat.seatNumber !== updatedStudent.assignedSeat) {
-              return { ...seat, assignedStudentId: undefined, status: seat.status === 'reserved' ? 'available' : seat.status };
+              const updated = { ...seat, assignedStudentId: undefined, status: seat.status === 'reserved' ? ('available' as const) : seat.status };
+              saveSeatDoc(updated).catch(() => {});
+              return updated;
             }
             return seat;
           })
@@ -443,15 +617,19 @@ export default function App() {
       };
 
       setStudents(prev => [newStudent, ...prev]);
+      saveStudentDoc(newStudent).catch(() => {});
 
       // Assign seat if provided
       if (newStudent.assignedSeat) {
         setSeats(prev =>
-          prev.map(seat =>
-            seat.seatNumber === newStudent.assignedSeat
-              ? { ...seat, assignedStudentId: newStudent.id, status: seat.status === 'available' ? 'reserved' : seat.status }
-              : seat
-          )
+          prev.map(seat => {
+            if (seat.seatNumber === newStudent.assignedSeat) {
+              const updated = { ...seat, assignedStudentId: newStudent.id, status: seat.status === 'available' ? ('reserved' as const) : seat.status };
+              saveSeatDoc(updated).catch(() => {});
+              return updated;
+            }
+            return seat;
+          })
         );
       }
 
@@ -467,17 +645,16 @@ export default function App() {
     newExpiry.setDate(newExpiry.getDate() + 30);
     const newExpiryStr = newExpiry.toISOString().split('T')[0];
 
+    const updatedStudent: Student = {
+      ...student,
+      status: 'active',
+      membershipExpiry: newExpiryStr,
+    };
+
     setStudents(prev =>
-      prev.map(s =>
-        s.id === student.id
-          ? {
-              ...s,
-              status: 'active',
-              membershipExpiry: newExpiryStr,
-            }
-          : s
-      )
+      prev.map(s => (s.id === student.id ? updatedStudent : s))
     );
+    saveStudentDoc(updatedStudent).catch(() => {});
 
     // Open record payment modal pre-populated
     setPaymentPreselectedStudent(student);
@@ -490,7 +667,14 @@ export default function App() {
   // Toggle student status
   const handleToggleStudentStatus = (studentId: string, newStatus: Student['status']) => {
     setStudents(prev =>
-      prev.map(s => (s.id === studentId ? { ...s, status: newStatus } : s))
+      prev.map(s => {
+        if (s.id === studentId) {
+          const updated = { ...s, status: newStatus };
+          saveStudentDoc(updated).catch(() => {});
+          return updated;
+        }
+        return s;
+      })
     );
     showToast(`Student status updated to ${newStatus}.`, 'info');
   };
@@ -501,21 +685,26 @@ export default function App() {
     if (!student) return;
 
     // Update student's assigned seat
+    const updatedStudent: Student = { ...student, assignedSeat: seatNumber };
     setStudents(prev =>
-      prev.map(s => (s.id === studentId ? { ...s, assignedSeat: seatNumber } : s))
+      prev.map(s => (s.id === studentId ? updatedStudent : s))
     );
+    saveStudentDoc(updatedStudent).catch(() => {});
 
     // Update seat
     setSeats(prev =>
-      prev.map(s =>
-        s.seatNumber === seatNumber
-          ? {
-              ...s,
-              assignedStudentId: studentId,
-              status: s.status === 'available' ? 'reserved' : s.status,
-            }
-          : s
-      )
+      prev.map(s => {
+        if (s.seatNumber === seatNumber) {
+          const updatedSeat: Seat = {
+            ...s,
+            assignedStudentId: studentId,
+            status: s.status === 'available' ? ('reserved' as const) : s.status,
+          };
+          saveSeatDoc(updatedSeat).catch(() => {});
+          return updatedSeat;
+        }
+        return s;
+      })
     );
 
     showToast(`Desk ${seatNumber} successfully allocated to ${student.fullName}.`, 'success');
@@ -528,22 +717,30 @@ export default function App() {
 
     // Clear student assignment
     if (seat.assignedStudentId) {
-      setStudents(prev =>
-        prev.map(s => (s.id === seat.assignedStudentId ? { ...s, assignedSeat: undefined } : s))
-      );
+      const assignedStudent = students.find(s => s.id === seat.assignedStudentId);
+      if (assignedStudent) {
+        const updatedStudent: Student = { ...assignedStudent, assignedSeat: undefined };
+        setStudents(prev =>
+          prev.map(s => (s.id === seat.assignedStudentId ? updatedStudent : s))
+        );
+        saveStudentDoc(updatedStudent).catch(() => {});
+      }
     }
 
     setSeats(prev =>
-      prev.map(s =>
-        s.seatNumber === seatNumber
-          ? {
-              ...s,
-              assignedStudentId: undefined,
-              currentOccupantStudentId: undefined,
-              status: 'available',
-            }
-          : s
-      )
+      prev.map(s => {
+        if (s.seatNumber === seatNumber) {
+          const updatedSeat: Seat = {
+            ...s,
+            assignedStudentId: undefined,
+            currentOccupantStudentId: undefined,
+            status: 'available',
+          };
+          saveSeatDoc(updatedSeat).catch(() => {});
+          return updatedSeat;
+        }
+        return s;
+      })
     );
 
     showToast(`Desk ${seatNumber} released and is now Available.`, 'success');
@@ -552,14 +749,17 @@ export default function App() {
 
   const handleToggleMaintenance = (seatNumber: string, isMaintenance: boolean) => {
     setSeats(prev =>
-      prev.map(s =>
-        s.seatNumber === seatNumber
-          ? {
-              ...s,
-              status: isMaintenance ? 'maintenance' : 'available',
-            }
-          : s
-      )
+      prev.map(s => {
+        if (s.seatNumber === seatNumber) {
+          const updatedSeat: Seat = {
+            ...s,
+            status: isMaintenance ? 'maintenance' : 'available',
+          };
+          saveSeatDoc(updatedSeat).catch(() => {});
+          return updatedSeat;
+        }
+        return s;
+      })
     );
 
     showToast(
@@ -583,6 +783,7 @@ export default function App() {
     };
 
     setPayments(prev => [newPayment, ...prev]);
+    savePaymentDoc(newPayment).catch(() => {});
 
     // Show receipt modal automatically
     setSelectedPaymentForReceipt(newPayment);
@@ -603,6 +804,7 @@ export default function App() {
     };
 
     setExpenses(prev => [newExpense, ...prev]);
+    saveExpenseDoc(newExpense).catch(() => {});
 
     // Update actualAmount in corresponding budget category
     setBudgets(prev =>
@@ -669,6 +871,7 @@ export default function App() {
       };
 
       newLogs.push(log);
+      saveReminderDoc(log).catch(() => {});
       sentCount++;
     }
 
@@ -710,6 +913,7 @@ export default function App() {
     };
 
     setReminders(prev => [log, ...prev]);
+    saveReminderDoc(log).catch(() => {});
 
     showToast(`WhatsApp reminder dispatched to ${student.fullName} (${student.phone}).`, 'success');
     addActivityLog(
@@ -790,6 +994,10 @@ export default function App() {
         students={students}
         onRoleChange={setRole}
         onOpenScanner={() => setIsScannerOpen(true)}
+        currentUser={currentUser}
+        isFirebaseConnected={isFirebaseConnected}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
       />
 
       {/* Navigation Bar */}
@@ -918,8 +1126,13 @@ export default function App() {
           <SettingsView
             settings={settings}
             activityLogs={activityLogs}
-            onUpdateSettings={setSettings}
+            onUpdateSettings={newSettings => {
+              setSettings(newSettings);
+              saveSettingsDoc(newSettings).catch(() => {});
+            }}
             onResetData={handleResetData}
+            onSyncToFirestore={handleSyncToFirestore}
+            isFirebaseConnected={isFirebaseConnected}
           />
         )}
       </main>

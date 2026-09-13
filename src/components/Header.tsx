@@ -3,12 +3,16 @@ import { SystemSettings, UserRole } from '../types';
 import {
   Clock,
   Shield,
-  User,
+  User as UserIcon,
   QrCode,
   CheckCircle2,
   Building2,
   Radio,
+  Cloud,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
+import { User } from 'firebase/auth';
 
 interface HeaderProps {
   settings: SystemSettings;
@@ -17,8 +21,12 @@ interface HeaderProps {
   totalSeats?: number;
   seats?: any[];
   students?: any[];
+  currentUser?: User | null;
+  isFirebaseConnected?: boolean;
   onRoleChange?: (role: UserRole) => void;
   onOpenScanner?: () => void;
+  onLogin?: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,8 +35,12 @@ export const Header: React.FC<HeaderProps> = ({
   insideCount = 0,
   totalSeats,
   seats,
+  currentUser,
+  isFirebaseConnected = true,
   onRoleChange,
   onOpenScanner,
+  onLogin,
+  onLogout,
 }) => {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
@@ -117,6 +129,17 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="sm:hidden">Scanner</span>
             </button>
 
+            {/* Firebase Cloud Status Badge */}
+            <div
+              id="header-firebase-status"
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-[11px] font-medium text-emerald-800"
+              title="Connected to Firebase Firestore (asia-south1)"
+            >
+              <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Firebase Cloud</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+
             {/* Role Switcher (§3.1, §32 Q2) */}
             <div className="flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-medium">
               <button
@@ -140,10 +163,45 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <User className="w-3 h-3 text-emerald-600" />
+                <UserIcon className="w-3 h-3 text-emerald-600" />
                 <span className="hidden md:inline">Front Desk</span>
               </button>
             </div>
+
+            {/* Firebase Google Auth Button / Profile */}
+            {currentUser ? (
+              <div className="flex items-center gap-2 pl-1">
+                {currentUser.photoURL ? (
+                  <img
+                    src={currentUser.photoURL}
+                    alt={currentUser.displayName || 'Admin'}
+                    className="w-7 h-7 rounded-full border border-slate-300"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+                    {(currentUser.displayName || currentUser.email || 'U')[0].toUpperCase()}
+                  </div>
+                )}
+                <button
+                  id="firebase-signout-btn"
+                  onClick={onLogout}
+                  title="Sign out of Firebase"
+                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                id="firebase-signin-btn"
+                onClick={onLogin}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-xs transition-colors"
+              >
+                <LogIn className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Sign In</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
